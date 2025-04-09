@@ -10,12 +10,14 @@ import (
 type model struct {
     choices [3]string
     cursor int
+    status map[int]bool
 }
 
 func initialModel() model {
     return model{
         choices: [3]string{"Pull", "Push", "Link"},
         cursor: 0,
+        status: make(map[int]bool),
     }
 }
 
@@ -38,8 +40,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 m.cursor++
             }
         case "enter", " ":
-            selected := m.choices[m.cursor]
-            fmt.Println("selected {}", selected)
+            m.status[m.cursor] = !m.status[m.cursor]
         }
     }
     return m, nil
@@ -53,7 +54,11 @@ func (m model) View() string {
         if m.cursor == i {
             cursor = ">"
         }
-        s += fmt.Sprintf("%s [%s]\n", cursor, choice)
+        status := ":("
+        if m.status[i] {
+            status = ":)"
+        }
+        s += fmt.Sprintf("%s [%s] %s\n", cursor, choice, status)
     }
     s += "\nPress q to quit.\n"
     return s
