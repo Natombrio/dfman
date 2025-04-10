@@ -1,0 +1,37 @@
+#.
+#├── README.md
+#└── configs
+#    ├── fish
+#    │   └── .config
+#    │       └── fish
+#    │           ├── config.fish
+#    │           └── functions
+#    │               └── custom_functions.fish
+#    ├── nvim
+#    │   └── .config
+#    │       └── nvim
+#    │           ├── init.lua
+#    │           ├── lua
+#    │           │   ├── config
+#    │           │   │   ├── autocmds.lua
+#    │           │   │   ├── keymaps.lua
+#    │           │   │   └── options.lua
+#    │           │   └── plugins
+#    │           │       ├── colorscheme.lua
+#    │           │       ├── lsp-config.lua
+#    │           │       ├── nvim-cmp.lua
+#    │           └── stylua.toml
+#    └── starship
+#        └── .config
+#            └── starship.toml
+Github_Url = "https://github.com/Natombrio/.dotfiles"
+[Links.fish]
+    Source = "configs/fish/.config/fish/"
+    Destination = "~/.config/"
+[Links.neovim]
+    Source = "configs/nvim/.config/nvim/"
+    Destination = "~/.config/"
+[Links.starship]
+    Source = "configs/starship/.config/starship.toml"
+    Destination = "~/.config/"
+

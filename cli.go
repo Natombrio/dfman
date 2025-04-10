@@ -1,23 +1,22 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"log"
+
 )
 
 func set_git_url() {
-
+    log.Println("TODO")
 }
 
 func git_pull() {
-    pu
-
+    log.Println("TODO")
 }
 
 func git_push() {
-
+    log.Println("TODO")
 }
 
 func link_files() {
-
+    log.Println("TODO")
 }
