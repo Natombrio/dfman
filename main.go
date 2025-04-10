@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Github_Url string
 	Links      map[string]DirectoryLink
+    Dotfile_Dir string
 }
 
 type DirectoryLink struct {

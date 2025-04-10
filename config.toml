@@ -25,13 +25,14 @@
 #        └── .config
 #            └── starship.toml
 Github_Url = "https://github.com/Natombrio/.dotfiles"
+Dotfile_Dir = "~/test/.dotfiles"
 [Links.fish]
-    Source = "configs/fish/.config/fish/"
+    Source = "./configs/fish/.config/fish/"
     Destination = "~/.config/"
 [Links.neovim]
-    Source = "configs/nvim/.config/nvim/"
+    Source = "./configs/nvim/.config/nvim/"
     Destination = "~/.config/"
 [Links.starship]
-    Source = "configs/starship/.config/starship.toml"
+    Source = "./configs/starship/.config/starship.toml"
     Destination = "~/.config/"
 
