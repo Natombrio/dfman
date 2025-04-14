@@ -1,31 +1,33 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
-    "os"
+	"os"
 	"os/exec"
-	"os/user"
+	"path/filepath"
 	"strings"
 )
 
-func home_relative_path_to_abs(given_path string) string {
-    path_parts := strings.Split(given_path, "~")
-    if len(path_parts) > 2 {
-        log.Fatal("Error: too many '~' in path")
+func relative_path_to_abs(given_path string) string {
+    if strings.HasPrefix(given_path, "~") {
+        home, err := os.UserHomeDir()
+        if err != nil {
+            log.Fatal("Error finding user home path.")
+        }
+        return filepath.Join(home, given_path[1:])
     }
-    usr, err := user.Current()
-    if err != nil {
-        log.Fatal("Error converting path: %s\n", err)
+    if !filepath.IsAbs(given_path) {
+        log.Fatalf("Path should be absolute. Was %s", given_path)
     }
-    abs_path := strings.Replace(given_path, "~", usr.HomeDir, 1)
-    return abs_path
+    return given_path
 }
 
 func run_command(workspace_dir string, binary_name string, args ...string) string {
     cmd := exec.Command(binary_name, args...)
     //fmt.Printf("\nRunning -- %s\n", cmd.String())
-    cmd.Dir = home_relative_path_to_abs(workspace_dir)
+    cmd.Dir = relative_path_to_abs(workspace_dir)
     output, err := cmd.CombinedOutput()
     if err != nil {
         return fmt.Sprintf("Error running command: %s\n", err)
@@ -43,27 +45,47 @@ func git_pull(dotfile_dir string) string {
     return fmt.Sprintf("Done -- %s\n", res)
 }
 
-func git_push() {
-    fmt.Printf("TODO\n")
-}
-
 func link_files() {
     fmt.Printf("TODO\n")
 }
 
-func check_if_paths_exist(items []SyncItem) []SyncItem {
-    results := make([]SyncItem, len(items))
-    for _, item := range items {
-        _, srcErr := os.Stat(item.source.path)
-        _, dstErr := os.Stat(item.destination.path)
-        item.source.exists = !os.IsNotExist(srcErr)
-        item.destination.exists = !os.IsNotExist(dstErr)
-        results = append(results, item)
-
+func is_symlinked(symlink_source string, symlink_target string) bool {
+    real_target, err := os.Readlink(symlink_source)
+    if err != nil {
+        log.Println("YAY!")
     }
-    return results
+    if symlink_target != real_target {
+        return false
+    }
+    return true
 }
 
-func validate_dotfile_destination() {
-    // Check if the destination locations already exist
+func check_if_paths_exist(items []SyncItem) {
+    for idx := range items {
+        _, srcErr := os.Stat(items[idx].source.path)
+        _, dstErr := os.Stat(items[idx].destination.path)
+        items[idx].source.exists = !errors.Is(srcErr, os.ErrNotExist)
+        items[idx].destination.exists = !errors.Is(dstErr, os.ErrNotExist)
+    }
+}
+
+func check_if_symlinked(items []SyncItem) {
+    for idx := range items {
+        info, err := os.Stat(items[idx].source.path)
+        if err != nil {
+            log.Fatalf("Error processing symlink %s, %s", items[idx].name, err)
+        }
+        linkSource := ""
+        if info.IsDir() {
+            linkSource = items[idx].destination.path+"/"+items[idx].name
+        } else {
+            linkSource = items[idx].destination.path+"/"+info.Name()
+        }
+        linkDestination := items[idx].source.path
+        items[idx].linked = is_symlinked(linkSource, linkDestination)
+        _, srcErr := os.Stat(items[idx].source.path)
+        _, dstErr := os.Stat(items[idx].destination.path)
+        items[idx].source.exists = !errors.Is(srcErr, os.ErrNotExist)
+        items[idx].destination.exists = !errors.Is(dstErr, os.ErrNotExist)
+    }
 }

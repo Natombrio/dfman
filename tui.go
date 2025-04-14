@@ -39,11 +39,11 @@ func initialModel(config ConfigData) model {
         items = append(items, SyncItem{
             name: linkName,
             source: PathItem{
-                path: home_relative_path_to_abs(val.Source),
+                path: relative_path_to_abs(config.Dotfile_Dir+val.Source),
                 exists: false,
             },
             destination: PathItem{
-                path: home_relative_path_to_abs(val.Destination),
+                path: relative_path_to_abs(val.Destination),
                 exists: false,
             },
             linked: false,
@@ -55,10 +55,10 @@ func initialModel(config ConfigData) model {
         syncItems: items,
     }
     dotfiles := modelState.syncItems
-    dotfiles = check_if_paths_exist(dotfiles)
-
+    check_if_paths_exist(dotfiles)
+    check_if_symlinked(dotfiles)
     return model{
-        actions: []string{"Clone", "Pull", "Link"},
+        actions: []string{"Link", "Pull", "Clone"},
         dotfiles: dotfiles,
         cursor: 0,
         actionStatus: make(map[int]string),
@@ -84,7 +84,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 m.actionStatus[i] = ""
             }
         case "down", "j":
-            if m.cursor < len(m.dotfiles)-1 {
+            if m.cursor < len(m.actions)-1 {
                 m.cursor++
             }
             for i := range m.actionStatus {
@@ -117,7 +117,6 @@ func (m model) View() string {
         s += fmt.Sprintf("  exists: %t   src: %s  \n", item.source.exists, item.source.path)
         s += fmt.Sprintf("  exists: %t   dst: %s  \n", item.destination.exists, item.destination.path)
     }
-
     s += "\nChoose an action to perform\n\n"
     for i, choice := range m.actions {
         cursor := " "
