@@ -2,45 +2,67 @@ package main
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type ModelState struct {
+    Github_Url string
+    Dotfile_Dir string
+    syncItems []SyncItem
+}
+
+type SyncItem struct {
+    name string
+    source PathItem
+    destination PathItem
+    linked bool
+}
+
+type PathItem struct {
+    path string
+    exists bool
+}
+
 type model struct {
     actions []string
-    dotfiles []string
+    dotfiles []SyncItem
     cursor int
-    status map[int]string
-    data Config
+    actionStatus map[int]string
+    modelState ModelState
 }
 
-func sortMap(config_map map[string]DirectoryLink) []string {
-    keys := make([]string, 0, len(config_map))
-    for k := range config_map {
-        keys = append(keys, k)
+func initialModel(config ConfigData) model {
+    var items []SyncItem
+    for linkName, val := range config.Links {
+        items = append(items, SyncItem{
+            name: linkName,
+            source: PathItem{
+                path: home_relative_path_to_abs(val.Source),
+                exists: false,
+            },
+            destination: PathItem{
+                path: home_relative_path_to_abs(val.Destination),
+                exists: false,
+            },
+            linked: false,
+        })
     }
-    slices.Sort(keys)
-    return keys
-}
-
-func initialModel(config Config) model {
-    config.Dotfile_Dir = home_relative_path_to_abs(config.Dotfile_Dir)
-    for k, val := range config.Links {
-        config.Links[k] = DirectoryLink{
-            Source: home_relative_path_to_abs(val.Source),
-            Destination: home_relative_path_to_abs(val.Destination),
-        }
+    modelState := ModelState{
+        Github_Url: config.Github_Url,
+        Dotfile_Dir: config.Dotfile_Dir,
+        syncItems: items,
     }
-    keys := sortMap(config.Links)
+    dotfiles := modelState.syncItems
+    dotfiles = check_if_paths_exist(dotfiles)
 
     return model{
         actions: []string{"Clone", "Pull", "Link"},
-        dotfiles: keys,
+        dotfiles: dotfiles,
         cursor: 0,
-        status: make(map[int]string),
-        data: config,
+        actionStatus: make(map[int]string),
+        modelState: modelState,
     }
 }
 
@@ -58,24 +80,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             if m.cursor > 0 {
                 m.cursor--
             }
-            for i := range m.status {
-                m.status[i] = ""
+            for i := range m.actionStatus {
+                m.actionStatus[i] = ""
             }
         case "down", "j":
             if m.cursor < len(m.dotfiles)-1 {
                 m.cursor++
             }
-            for i := range m.status {
-                m.status[i] = ""
+            for i := range m.actionStatus {
+                m.actionStatus[i] = ""
             }
         case "enter", " ":
             switch m.actions[m.cursor] {
             case "Clone":
-                res := strings.Split(git_clone("~", m.data.Github_Url, m.data.Dotfile_Dir), "\n")[0]
-                m.status[m.cursor] = res
+                res := strings.Split(git_clone("~", m.modelState.Github_Url, m.modelState.Dotfile_Dir), "\n")[0]
+                m.actionStatus[m.cursor] = res
             case "Pull":
-                res := strings.Split(git_pull(m.data.Dotfile_Dir), "\n")[0]
-                m.status[m.cursor] = res
+                res := strings.Split(git_pull(m.modelState.Dotfile_Dir), "\n")[0]
+                m.actionStatus[m.cursor] = res
             case "Link":
                 link_files()
             }
@@ -86,12 +108,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 
 func (m model) View() string {
-    s := fmt.Sprintf("Github repo:\n %s\n", m.data.Github_Url)
-    s += fmt.Sprintf("Dotfile dir:\n %s\n\n", m.data.Dotfile_Dir)
-    s += fmt.Sprintf("Tracked config files:\n")
-    files := sortMap(m.data.Links)
-    for _, name := range files {
-        s += fmt.Sprintf(" %s\n", name)
+    s := fmt.Sprintf("Github repo:\n %s\n", m.modelState.Github_Url)
+    s += fmt.Sprintf("Dotfile dir:\n %s\n\n", m.modelState.Dotfile_Dir)
+    s += fmt.Sprintf("Tracked config items:\n")
+    items := m.modelState.syncItems
+    for _, item := range items {
+        s += fmt.Sprintf(" %s, linked: %t\n", item.name, item.linked)
+        s += fmt.Sprintf("  exists: %t   src: %s  \n", item.source.exists, item.source.path)
+        s += fmt.Sprintf("  exists: %t   dst: %s  \n", item.destination.exists, item.destination.path)
     }
 
     s += "\nChoose an action to perform\n\n"
@@ -100,9 +124,9 @@ func (m model) View() string {
         if m.cursor == i {
             cursor = ">"
         }
-        status := m.status[i]
+        status := m.actionStatus[i]
         if status != "" {
-            status = "|| " + m.status[i]
+            status = "|| " + m.actionStatus[i]
         }
         s += fmt.Sprintf("%s %s %s\n", cursor, choice, status)
     }

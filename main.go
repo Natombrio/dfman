@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-type Config struct {
+type ConfigData struct {
 	Github_Url string
 	Links      map[string]DirectoryLink
     Dotfile_Dir string
@@ -21,7 +21,7 @@ type DirectoryLink struct {
 	Destination string
 }
 
-func launch_tui(config Config) {
+func launch_tui(config ConfigData) {
 	p := tea.NewProgram(initialModel(config))
 	if _, err := p.Run(); err != nil {
 		log.Printf("Error: %v", err)
@@ -29,13 +29,13 @@ func launch_tui(config Config) {
 	}
 }
 
-func parse_config(config_file string) Config {
+func parse_config(config_file string) ConfigData {
 	f, err := os.ReadFile(config_file)
 	if err != nil {
 		log.Fatal("Error reading config file!\n\t", err)
 	}
 	config_data := string(f)
-	var config Config
+	var config ConfigData
 	_, err = toml.Decode(config_data, &config)
 	if err != nil {
 		log.Fatal("Error decoding config file: ", err)
@@ -62,6 +62,7 @@ func main() {
             cli_flag := cmd.Bool("cli")
             config_file := cmd.String("config_file")
             config := parse_config(config_file)
+            config.Dotfile_Dir = home_relative_path_to_abs(config.Dotfile_Dir)
 
             if cli_flag {
                 log.Println("cli mode")

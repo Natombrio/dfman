@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+    "os"
 	"os/exec"
 	"os/user"
 	"strings"
@@ -48,4 +49,21 @@ func git_push() {
 
 func link_files() {
     fmt.Printf("TODO\n")
+}
+
+func check_if_paths_exist(items []SyncItem) []SyncItem {
+    results := make([]SyncItem, len(items))
+    for _, item := range items {
+        _, srcErr := os.Stat(item.source.path)
+        _, dstErr := os.Stat(item.destination.path)
+        item.source.exists = !os.IsNotExist(srcErr)
+        item.destination.exists = !os.IsNotExist(dstErr)
+        results = append(results, item)
+
+    }
+    return results
+}
+
+func validate_dotfile_destination() {
+    // Check if the destination locations already exist
 }
